@@ -1,87 +1,56 @@
 const BlockType = require('../../extension-support/block-type');
 const ArgumentType = require('../../extension-support/argument-type');
-const TargetType = require('../../extension-support/target-type');
 
-class Scratch3YourExtension {
+class Scratch3Modbus {
 
-    constructor (runtime) {
-        // put any setup for your extension here
+    constructor () {
+        this.ws = new WebSocket('ws://localhost:8080');
+        this.lastValue = 0;
+
+        this.ws.onmessage = (event) => {
+            const msg = JSON.parse(event.data);
+
+            if (msg.type === 'holdingValue') {
+                this.lastValue = msg.value;
+            }
+
+            if (msg.type === 'error') {
+                console.error('Modbus error:', msg.message);
+            }
+        };
     }
 
-    /**
-     * Returns the metadata about your extension.
-     */
     getInfo () {
         return {
-            // unique ID for your extension
-            id: 'ModbusScratchExtension',
+            id: 'modbus',
+            name: 'Modbus TCP',
+            color1: '#4b9cd3',
+            color2: '#3478a3',
 
-            // name that will be displayed in the Scratch UI
-            name: 'Communication',
-
-            // colours to use for your extension blocks
-            color1: '#79b2c6ff',
-            color2: '#ff0454ff',
-
-            // icons to display
-            blockIconURI: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAkAAAAFCAAAAACyOJm3AAAAFklEQVQYV2P4DwMMEMgAI/+DEUIMBgAEWB7i7uidhAAAAABJRU5ErkJggg==',
-            menuIconURI: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAkAAAAFCAAAAACyOJm3AAAAFklEQVQYV2P4DwMMEMgAI/+DEUIMBgAEWB7i7uidhAAAAABJRU5ErkJggg==',
-
-            // your Scratch blocks
             blocks: [
                 {
-                    // name of the function where your block code lives
-                    opcode: 'TestBlock',
-
-                    // type of block - choose from:
-                    //   BlockType.REPORTER - returns a value, like "direction"
-                    //   BlockType.BOOLEAN - same as REPORTER but returns a true/false value
-                    //   BlockType.COMMAND - a normal command block, like "move {} steps"
-                    //   BlockType.HAT - starts a stack if its value changes from false to true ("edge triggered")
-                    blockType: BlockType.REPORTER,
-
-                    // category to group blocks in Scratch UI
-                    category: 'Communication',
-
-                    // label to display on the block
-                    text: 'My first block [MY_NUMBER] and [MY_STRING]',
-
-                    // true if this block should end a stack
-                    terminal: false,
-
-                    // where this block should be available for code - choose from:
-                    //   TargetType.SPRITE - for code in sprites
-                    //   TargetType.STAGE  - for code on the stage / backdrop
-                    // remove one of these if this block doesn't apply to both
-                    filter: [ TargetType.SPRITE, TargetType.STAGE ],
-
-                    // arguments used in the block
+                    opcode: 'connect',
+                    blockType: BlockType.COMMAND,
+                    text: 'connect Modbus TCP ip [IP] unit [UNIT]',
                     arguments: {
-                        MY_NUMBER: {
-                            // default value before the user sets something
-                            defaultValue: 67,
-
-                            // type/shape of the parameter - choose from:
-                            //     ArgumentType.ANGLE - numeric value with an angle picker
-                            //     ArgumentType.BOOLEAN - true/false value
-                            //     ArgumentType.COLOR - numeric value with a colour picker
-                            //     ArgumentType.NUMBER - numeric value
-                            //     ArgumentType.STRING - text value
-                            //     ArgumentType.NOTE - midi music value with a piano picker
-                            type: ArgumentType.NUMBER
+                        IP: {
+                            type: ArgumentType.STRING,
+                            defaultValue: '127.0.0.1'
                         },
-                        MY_STRING: {
-                            // default value before the user sets something
-                            defaultValue: 'Vives student',
-
-                            // type/shape of the parameter - choose from:
-                            //     ArgumentType.ANGLE - numeric value with an angle picker
-                            //     ArgumentType.BOOLEAN - true/false value
-                            //     ArgumentType.COLOR - numeric value with a colour picker
-                            //     ArgumentType.NUMBER - numeric value
-                            //     ArgumentType.STRING - text value
-                            //     ArgumentType.NOTE - midi music value with a piano picker
-                            type: ArgumentType.STRING
+                        UNIT: {
+                            type: ArgumentType.NUMBER,
+                            defaultValue: 1
+                        }
+                    }
+                },
+                {
+                    opcode: 'readHolding',
+                    blockType: BlockType.REPORTER,
+                    text: 'read holding register [ADDR]',
+                    arguments: {
+                        ADDR: {
+                            type: ArgumentType.NUMBER,
+                            defaultValue: 0
                         }
                     }
                 }
@@ -89,15 +58,28 @@ class Scratch3YourExtension {
         };
     }
 
-
+  
     /**
      * implementation of the block with the opcode that matches this name
      *  this will be called when the block is used
      */
-    TestBlock({ MY_NUMBER, MY_STRING }) {
-        // example implementation to return a string
-        return MY_STRING + ' : doubled would be ' + (MY_NUMBER * 2);
+        connect ({ IP, UNIT }) {
+        this.ws.send(JSON.stringify({
+            type: 'connect',
+            ip: IP,
+            unitId: UNIT
+        }));
+    }
+
+    readHolding ({ ADDR }) {
+        this.ws.send(JSON.stringify({
+            type: 'readHolding',
+            address: ADDR
+        }));
+
+        // Scratch reporters must return immediately
+        return this.lastValue;
     }
 }
 
-module.exports = Scratch3YourExtension;
+module.exports = Scratch3Modbus;
