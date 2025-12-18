@@ -40,6 +40,9 @@ class Scratch3YourExtension {
                     //   BlockType.HAT - starts a stack if its value changes from false to true ("edge triggered")
                     blockType: BlockType.REPORTER,
 
+                    // category to group blocks in Scratch UI
+                    category: 'Communication',
+
                     // label to display on the block
                     text: 'My first block [MY_NUMBER] and [MY_STRING]',
 
