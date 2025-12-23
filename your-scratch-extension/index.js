@@ -6,12 +6,22 @@ class Scratch3Modbus {
     constructor () {
         this.ws = new WebSocket('ws://localhost:8080');
         this.lastValue = 0;
+        this.lastCoilValue = 0;
+        this.lastInputStatusValue = 0;
 
         this.ws.onmessage = (event) => {
             const msg = JSON.parse(event.data);
 
             if (msg.type === 'holdingValue') {
                 this.lastValue = msg.value;
+            }
+
+            if (msg.type === 'coilValue') {
+                this.lastCoilValue = msg.value;
+            }
+
+            if (msg.type === 'inputStatusValue') {
+                this.lastInputStatusValue = msg.value;
             }
 
             if (msg.type === 'error') {
@@ -53,6 +63,28 @@ class Scratch3Modbus {
                             defaultValue: 0
                         }
                     }
+                },
+                {
+                    opcode: 'readCoils',
+                    blockType: BlockType.REPORTER,
+                    text: 'read coil [ADDR]',
+                    arguments: {
+                        ADDR: {
+                            type: ArgumentType.NUMBER,
+                            defaultValue: 0
+                        }
+                    }
+                },
+                {
+                    opcode: 'readInputStatus',
+                    blockType: BlockType.REPORTER,
+                    text: 'read input status [ADDR]',
+                    arguments: {
+                        ADDR: {
+                            type: ArgumentType.NUMBER,
+                            defaultValue: 0
+                        }
+                    }
                 }
             ]
         };
@@ -80,6 +112,27 @@ class Scratch3Modbus {
         // Scratch reporters must return immediately
         return this.lastValue;
     }
-}
+
+    readCoils ({ ADDR }) {
+        this.ws.send(JSON.stringify({
+            type: 'readCoils',
+            address: ADDR
+        }));
+
+        // Scratch reporters must return immediately
+        return this.lastCoilValue;
+    }
+
+    readInputStatus ({ ADDR }) {
+        this.ws.send(JSON.stringify({
+            type: 'readInputStatus',
+            address: ADDR
+        }));
+
+        // Scratch reporters must return immediately
+        return this.lastInputStatusValue;
+    }
+
+    }
 
 module.exports = Scratch3Modbus;
